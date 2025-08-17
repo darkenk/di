@@ -30,7 +30,7 @@ class shared {
     //<<lock mutex so that move will be synchronized>>
     explicit scope(scope&& other) noexcept : scope(std::move(other), std::lock_guard<std::mutex>(other.mutex_)) {}
     //<<synchronized move constructor>>
-    scope(scope&& other, const std::lock_guard<std::mutex>&) noexcept : object_(std::move(other.object_)) {}
+    scope(scope&& other, const std::lock_guard<std::mutex>&) noexcept {}
 #endif
 
     template <class T_, class>
@@ -45,14 +45,15 @@ class shared {
      */
     template <class, class, class TProvider>
     wrappers::shared<shared, T> create(const TProvider& provider) & {
-      if (!object_) {
+      auto& object = provider.cfg().template data<T>();
+      if (!object) {
 #if !defined(BOOST_DI_NOT_THREAD_SAFE)
         std::lock_guard<std::mutex> lock(mutex_);
-        if (!object_)
+        if (!object)
 #endif
-          object_ = std::shared_ptr<T>{provider.get()};
+          object = std::shared_ptr<T>{provider.get()};
       }
-      return wrappers::shared<shared, T>{object_};
+      return wrappers::shared<shared, T>{std::static_pointer_cast<T>(object)};
     }
 
     /**
@@ -75,7 +76,6 @@ class shared {
 #if !defined(BOOST_DI_NOT_THREAD_SAFE)
     std::mutex mutex_;
 #endif
-    std::shared_ptr<T> object_;  /// used by `in(shared)`, otherwise destroyed immediately
   };
 };
 }  // namespace detail
