@@ -121,7 +121,7 @@ class injector : public core::injector<runtime_provider<TErrorPolicy, TScopeTrai
 
   template <class T, std::enable_if_t<!std::is_base_of<core::injector_base, T>::value, int> = 0>
   void install(const T &binding) {
-    this->cfg().bindings()[std::type_index(typeid(typename T::expected))] = [this, binding] {
+    this->cfg().bindings()[std::type_index(typeid(typename T::expected))] = [this, &binding] {
       return make<typename T::given>(binding);
     };
   }
