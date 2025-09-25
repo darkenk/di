@@ -6,8 +6,9 @@
 //
 #pragma once
 
-#include "boost/di.hpp"
 #include <cstdint>
+
+#include "boost/di.hpp"
 
 //<-
 #if defined(__CLANG__)
@@ -44,8 +45,8 @@ template <char...>
 struct chars {};
 
 struct pair {
-  std::int64_t begin{};
-  std::int64_t end{};
+  std::uint64_t begin{};
+  std::uint64_t end{};
 };
 
 #if (__GNUC__ >= 9)
@@ -54,32 +55,31 @@ struct pair {
 #endif
 template <class T, T... Chars>
 constexpr auto operator""_s() {
-  return aux::integral_constant<std::int64_t, const_hash(chars<Chars...>{}, sizeof...(Chars) + 1)>{};
+  return aux::integral_constant<std::uint64_t, const_hash(chars<Chars...>{}, sizeof...(Chars) + 1)>{};
 }
 #if (__GNUC__ >= 9)
 #pragma GCC diagnostic pop
 #endif
 
-std::int64_t constexpr const_hash(char const* input, std::int64_t m = 0, std::int64_t i = 0) {
-  return *input && i < m ? static_cast<std::int64_t>(*input) + 33 * const_hash(input + 1, m, i + 1) : 5381;
+std::uint64_t constexpr const_hash(char const* input, std::uint64_t m = 0, std::uint64_t i = 0) {
+  return *input && i < m ? static_cast<std::uint64_t>(*input) + 33 * const_hash(input + 1, m, i + 1) : 5381;
 }
 
 template <char C, char... Chars>
-std::int64_t constexpr const_hash(const chars<C, Chars...>&, std::int64_t m = 0, std::int64_t i = 0) {
-  return C && i < m ? static_cast<std::int64_t>(C) + 33 * const_hash(chars<Chars...>{}, m, i + 1) : 5381;
+std::uint64_t constexpr const_hash(const chars<C, Chars...>&, std::uint64_t m = 0, std::uint64_t i = 0) {
+  return C && i < m ? static_cast<std::uint64_t>(C) + 33 * const_hash(chars<Chars...>{}, m, i + 1) : 5381;
 }
 
-std::int64_t constexpr const_hash(const chars<>&, ...) { return 5381; }
+std::uint64_t constexpr const_hash(const chars<>&, ...) { return 5381; }
 
 constexpr pair get_name_impl(const char* input, int begin, int n = 0, int quote = 0) {
   return !*input || *input == ','
              ? pair{0, 0}
              : (quote == 2 ? pair{begin + 1, n}
-                           : (quote == 1 && *input == '"'
+                           : (quote == 1 && *input == '"' ? get_name_impl(input + 1, begin, n, quote + 1)
+                              : quote == 0 && *input == '"'
                                   ? get_name_impl(input + 1, begin, n, quote + 1)
-                                  : quote == 0 && *input == '"' ? get_name_impl(input + 1, begin, n, quote + 1)
-                                                                : get_name_impl(input + 1, quote == 0 ? begin + 1 : begin,
-                                                                                quote == 1 ? n + 1 : n, quote)));
+                                  : get_name_impl(input + 1, quote == 0 ? begin + 1 : begin, quote == 1 ? n + 1 : n, quote)));
 }
 
 constexpr pair get_name(const char* input, int N, int c = 0, int i = 0) {
@@ -93,8 +93,9 @@ constexpr bool has_names(const char* input) { return *input ? *input == '"' ? tr
 template <class T, class TArg, int N>
 struct parse {
   static constexpr auto name = get_name(T::str, N);
-  using type = aux::conditional_t<name.begin == name.end, TArg,
-                                  named<aux::integral_constant<std::int64_t, const_hash(&T::str[name.begin], name.end)>, TArg>>;
+  using type =
+      aux::conditional_t<name.begin == name.end, TArg,
+                         named<aux::integral_constant<std::uint64_t, const_hash(&T::str[name.begin], name.end)>, TArg>>;
 };
 
 template <class, class, class...>
